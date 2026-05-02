@@ -3,10 +3,18 @@ import 'package:provider/provider.dart';
 import 'package:sentinelle_ci/utils/app_colors.dart';
 import 'package:sentinelle_ci/viewmodels/report_viewmodel.dart';
 import 'package:sentinelle_ci/widgets/report_card.dart';
+import 'package:sentinelle_ci/models/report_model.dart';
 import 'create_report_screen.dart';
 
-class ReportListScreen extends StatelessWidget {
+class ReportListScreen extends StatefulWidget {
   const ReportListScreen({super.key});
+
+  @override
+  State<ReportListScreen> createState() => _ReportListScreenState();
+}
+
+class _ReportListScreenState extends State<ReportListScreen> {
+  String _activeFilter = 'Tous';
 
   @override
   Widget build(BuildContext context) {
@@ -20,19 +28,21 @@ class ReportListScreen extends StatelessWidget {
       ),
       body: Consumer<ReportViewModel>(
         builder: (context, vm, child) {
+          final filteredReports = _getFilteredReports(vm);
+          
           return Column(
             children: [
               _buildSummaryCards(vm),
               _buildFilterTabs(vm),
               Expanded(
-                child: vm.reports.isEmpty
+                child: filteredReports.isEmpty
                     ? _buildEmptyState(context)
                     : ListView.builder(
                         padding: const EdgeInsets.all(20),
-                        itemCount: vm.reports.length + 1,
+                        itemCount: filteredReports.length + 1,
                         itemBuilder: (context, index) {
-                          if (index == vm.reports.length) return const _PriorityLegend();
-                          return ReportCard(report: vm.reports[index]);
+                          if (index == filteredReports.length) return const _PriorityLegend();
+                          return ReportCard(report: filteredReports[index]);
                         },
                       ),
               ),
@@ -41,6 +51,19 @@ class ReportListScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  List<ReportModel> _getFilteredReports(ReportViewModel vm) {
+    switch (_activeFilter) {
+      case 'En cours':
+        return vm.reports.where((r) => r.status == ReportStatus.inProgress || r.status == ReportStatus.validated).toList();
+      case 'Résolus':
+        return vm.reports.where((r) => r.status == ReportStatus.resolved).toList();
+      case 'Urgents':
+        return vm.reports.where((r) => r.isUrgent).toList();
+      default:
+        return vm.reports;
+    }
   }
 
   Widget _buildSummaryCards(ReportViewModel vm) {
@@ -64,10 +87,30 @@ class ReportListScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          _FilterChip(label: 'Tous', count: vm.reports.length, isSelected: true),
-          _FilterChip(label: 'En cours', count: vm.inProgressCount),
-          _FilterChip(label: 'Résolus', count: vm.resolvedCount),
-          _FilterChip(label: 'Urgents', count: vm.urgentCount),
+          _FilterChip(
+            label: 'Tous', 
+            count: vm.reports.length, 
+            isSelected: _activeFilter == 'Tous',
+            onTap: () => setState(() => _activeFilter = 'Tous'),
+          ),
+          _FilterChip(
+            label: 'En cours', 
+            count: vm.inProgressCount, 
+            isSelected: _activeFilter == 'En cours',
+            onTap: () => setState(() => _activeFilter = 'En cours'),
+          ),
+          _FilterChip(
+            label: 'Résolus', 
+            count: vm.resolvedCount, 
+            isSelected: _activeFilter == 'Résolus',
+            onTap: () => setState(() => _activeFilter = 'Résolus'),
+          ),
+          _FilterChip(
+            label: 'Urgents', 
+            count: vm.urgentCount, 
+            isSelected: _activeFilter == 'Urgents',
+            onTap: () => setState(() => _activeFilter = 'Urgents'),
+          ),
         ],
       ),
     );
@@ -153,44 +196,48 @@ class _FilterChip extends StatelessWidget {
   final String label;
   final int count;
   final bool isSelected;
+  final VoidCallback onTap;
 
-  const _FilterChip({required this.label, required this.count, this.isSelected = false});
+  const _FilterChip({required this.label, required this.count, required this.onTap, this.isSelected = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isSelected ? AppColors.textDark : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isSelected ? AppColors.textDark : Colors.grey.shade300),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: isSelected ? Colors.white : AppColors.textDark,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200,
-              shape: BoxShape.circle,
-            ),
-            child: Text(
-              '$count',
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.textDark : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isSelected ? AppColors.textDark : Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
               style: TextStyle(
-                fontSize: 10,
                 color: isSelected ? Colors.white : AppColors.textDark,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.white.withValues(alpha: 0.2) : Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isSelected ? Colors.white : AppColors.textDark,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

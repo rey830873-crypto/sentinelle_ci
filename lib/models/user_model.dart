@@ -10,6 +10,7 @@ class UserModel {
   final int reportCount;
   final int resolvedCount;
   final List<String> badges;
+  final bool isAnonymous;
 
   UserModel({
     required this.id,
@@ -21,6 +22,7 @@ class UserModel {
     this.reportCount = 0,
     this.resolvedCount = 0,
     this.badges = const [],
+    this.isAnonymous = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -34,6 +36,7 @@ class UserModel {
       'reportCount': reportCount,
       'resolvedCount': resolvedCount,
       'badges': badges,
+      'isAnonymous': isAnonymous,
     };
   }
 
@@ -48,6 +51,7 @@ class UserModel {
       reportCount: json['reportCount'] ?? 0,
       resolvedCount: json['resolvedCount'] ?? 0,
       badges: List<String>.from(json['badges'] ?? []),
+      isAnonymous: json['isAnonymous'] ?? false,
     );
   }
 }

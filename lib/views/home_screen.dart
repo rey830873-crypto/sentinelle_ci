@@ -6,6 +6,7 @@ import 'package:sentinelle_ci/viewmodels/report_viewmodel.dart';
 import 'package:sentinelle_ci/models/user_model.dart';
 import 'package:sentinelle_ci/models/report_model.dart';
 import 'package:sentinelle_ci/widgets/report_card.dart';
+import 'package:sentinelle_ci/views/welcome_screen.dart';
 import 'package:sentinelle_ci/views/create_report_screen.dart';
 import 'package:sentinelle_ci/views/report_list_screen.dart';
 import 'package:sentinelle_ci/views/profile_screen.dart';
@@ -22,23 +23,64 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
-  final List<Widget> _screens = [
-    const HomeContent(),
-    const ReportListScreen(),
-    const CreateReportScreen(),
-    const MapScreen(),
-    const ProfileScreen(),
-  ];
+  List<Widget> _getScreens(bool isAdmin) {
+    if (isAdmin) {
+      return [
+        const AdminDashboard(),
+        const MapScreen(),
+        const ProfileScreen(),
+      ];
+    }
+    return [
+      const HomeContent(),
+      const ReportListScreen(),
+      const CreateReportScreen(),
+      const MapScreen(),
+      const ProfileScreen(),
+    ];
+  }
+
+  List<BottomNavigationBarItem> _getNavItems(bool isAdmin) {
+    if (isAdmin) {
+      return const [
+        BottomNavigationBarItem(icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+        BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Carte'),
+        BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
+      ];
+    }
+    return const [
+      BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Accueil'),
+      BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Suivi'),
+      BottomNavigationBarItem(
+        icon: CircleAvatar(
+          backgroundColor: AppColors.primaryOrange,
+          child: Icon(Icons.add, color: Colors.white),
+        ),
+        label: 'Signaler',
+      ),
+      BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Carte'),
+      BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthViewModel>().currentUser;
     final isAdmin = user?.role == UserRole.administrator;
+    
+    final screens = _getScreens(isAdmin);
+    final navItems = _getNavItems(isAdmin);
 
-    if (isAdmin) return const AdminDashboard();
+    // Ajustement de l'index si le rôle change (sécurité)
+    if (_selectedIndex >= screens.length) {
+      _selectedIndex = 0;
+    }
 
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,
@@ -49,19 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
             _selectedIndex = index;
           });
         },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_outlined), label: 'Accueil'),
-          BottomNavigationBarItem(icon: Icon(Icons.assignment_outlined), label: 'Suivi'),
-          BottomNavigationBarItem(
-            icon: CircleAvatar(
-              backgroundColor: AppColors.primaryOrange,
-              child: Icon(Icons.add, color: Colors.white),
-            ),
-            label: 'Signaler',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Carte'),
-          BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profil'),
-        ],
+        items: navItems,
       ),
     );
   }
@@ -102,6 +132,11 @@ class HomeContent extends StatelessWidget {
                       TextButton(
                         onPressed: () {
                           authViewModel.logout();
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                            (route) => false,
+                          );
                         },
                         child: const Text('Déconnexion', style: TextStyle(color: Colors.red)),
                       )
@@ -111,7 +146,7 @@ class HomeContent extends StatelessWidget {
               ),
               const SizedBox(height: 30),
               Text(
-                'Bonsoir, ${user?.name.split(' ').first ?? ""}',
+                '${_getGreeting()}, ${user?.name.split(' ').first ?? ""}',
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const Text('Votre quartier compte sur vos yeux aujourd\'hui.'),
@@ -133,11 +168,11 @@ class HomeContent extends StatelessWidget {
                 builder: (context, reportVm, child) {
                   return Row(
                     children: [
-                      _StatCard(count: user?.reportCount ?? 0, label: 'Signalements', icon: Icons.layers_outlined),
+                      _StatCard(count: reportVm.reports.where((r) => r.userId == (user?.id ?? '')).length, label: 'Mes Signalements', icon: Icons.layers_outlined),
                       const SizedBox(width: 8),
                       _StatCard(count: reportVm.inProgressCount, label: 'En cours', icon: Icons.schedule, color: Colors.orange),
                       const SizedBox(width: 8),
-                      _StatCard(count: user?.resolvedCount ?? 0, label: 'Résolus', icon: Icons.check_circle_outline, color: Colors.green),
+                      _StatCard(count: reportVm.reports.where((r) => r.userId == (user?.id ?? '') && r.status == ReportStatus.resolved).length, label: 'Mes Résolus', icon: Icons.check_circle_outline, color: Colors.green),
                     ],
                   );
                 },
@@ -145,8 +180,6 @@ class HomeContent extends StatelessWidget {
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
-                  // L'index 2 est le bouton 'Signaler' du BottomNavigationBar
-                  // Mais ici on peut aussi naviguer directement.
                   Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateReportScreen()));
                 },
                 child: _ActionBanner(),
@@ -185,6 +218,14 @@ class HomeContent extends StatelessWidget {
       ),
     );
   }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Bonjour';
+    if (hour < 18) return 'Bon après-midi';
+    return 'Bonsoir';
+  }
+
   Widget _buildCategoryItem(BuildContext context, IconData icon, String label, ReportCategory category) {
     return GestureDetector(
       onTap: () {

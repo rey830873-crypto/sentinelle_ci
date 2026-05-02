@@ -2,377 +2,312 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentinelle_ci/utils/app_colors.dart';
 import 'package:sentinelle_ci/viewmodels/auth_viewmodel.dart';
-import 'leaderboard_screen.dart';
+import 'package:sentinelle_ci/views/leaderboard_screen.dart';
+import 'package:sentinelle_ci/views/report_list_screen.dart';
+import 'package:sentinelle_ci/models/user_model.dart';
+import 'package:sentinelle_ci/models/report_model.dart';
+import 'package:sentinelle_ci/views/welcome_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
-  void _showLanguagePicker(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) => Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Langues disponibles', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4),
-              const Text('Choisissez votre langue préférée (CI & Inter)', style: TextStyle(color: Colors.grey)),
-              const Divider(height: 30),
-              Expanded(
-                child: ListView(
-                  controller: scrollController,
-                  children: [
-                    const Text('International', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryGreen)),
-                    _LanguageTile(title: 'Français', isSelected: true),
-                    _LanguageTile(title: 'English'),
-                    const SizedBox(height: 15),
-                    const Text('Côte d\'Ivoire', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryOrange)),
-                    _LanguageTile(title: 'Dioula (Malinké)'),
-                    _LanguageTile(title: 'Baoulé'),
-                    _LanguageTile(title: 'Bété'),
-                    _LanguageTile(title: 'Sénoufo'),
-                    _LanguageTile(title: 'Yacouba'),
-                    _LanguageTile(title: 'Guéré'),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool _notificationsEnabled = true;
 
   @override
   Widget build(BuildContext context) {
-    final authViewModel = context.watch<AuthViewModel>();
-    final user = authViewModel.currentUser;
-
-    if (user == null) return const Center(child: Text('Veuillez vous connecter'));
+    final auth = context.watch<AuthViewModel>();
+    final user = auth.currentUser;
+    final isAnonymous = user?.isAnonymous ?? false;
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              const CircleAvatar(
-                radius: 40,
-                backgroundColor: AppColors.primaryGreen,
-                child: Text('EH', style: TextStyle(fontSize: 30, color: Colors.white, fontWeight: FontWeight.bold)),
-              ),
-              const SizedBox(height: 12),
-              Text(user.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              Text('@${user.name.toLowerCase().replaceAll(' ', '')}', style: const TextStyle(color: AppColors.textLight)),
-              const SizedBox(height: 24),
-              
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      appBar: AppBar(
+        title: const Text('Mon Profil', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textDark,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Modification du profil bientôt disponible'))
+              );
+            },
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Header Profil
+            Center(
+              child: Column(
                 children: [
-                  _ProfileStat(value: '${user.points}', label: 'Points'),
-                  _ProfileStat(value: '${user.reportCount}', label: 'Signalements'),
-                  _ProfileStat(value: '${user.resolvedCount}', label: 'Résolus'),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              const _SectionTitle(title: 'Confidentialité'),
-              _SettingToggle(
-                icon: Icons.visibility_outlined,
-                title: 'Signalement anonyme',
-                subtitle: 'Vos signaux affichent votre pseudo public.',
-                value: false,
-                onChanged: (v) {},
-              ),
-              
-              const SizedBox(height: 20),
-              const _SectionTitle(title: 'Réglages'),
-              _SettingToggle(
-                icon: Icons.dark_mode_outlined,
-                title: 'Mode sombre',
-                subtitle: 'Économie d\'énergie',
-                value: false,
-                onChanged: (v) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Le mode sombre sera disponible dans la version finale !'))
-                  );
-                },
-              ),
-              _SettingToggle(
-                icon: Icons.notifications_none,
-                title: 'Notifications push',
-                subtitle: 'Actives',
-                value: true,
-                onChanged: (v) {},
-              ),
-              _SettingItem(
-                icon: Icons.language, 
-                title: 'Langue de l\'application', 
-                value: 'Français',
-                onTap: () => _showLanguagePicker(context),
-              ),
-              _SettingItem(
-                icon: Icons.emoji_events_outlined, 
-                title: 'Classement des communes', 
-                value: 'Voir',
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LeaderboardScreen())),
-              ),
-              const _SettingItem(icon: Icons.link, title: 'Données blockchain', value: 'Polygon'),
-
-              const SizedBox(height: 20),
-              const _SectionTitle(title: 'Vos badges'),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Column(
-                  children: [
-                    _BadgeItem(
-                      title: 'Signalisation de premier ordre',
-                      subtitle: 'Vous avez fait entendre votre voix.',
-                      icon: Icons.military_tech,
-                      color: Colors.orange,
-                      earned: user.badges.contains('first_report'),
-                    ),
-                    const Divider(height: 1),
-                    _BadgeItem(
-                      title: 'Témoin fiable',
-                      subtitle: 'Vos signaux sont confirmés.',
-                      icon: Icons.verified_user,
-                      color: Colors.green,
-                      earned: user.badges.contains('reliable_witness'),
-                    ),
-                    const Divider(height: 1),
-                    _BadgeItem(
-                      title: 'Vigie de quartier',
-                      subtitle: '500 points atteints.',
-                      icon: Icons.home_work,
-                      color: AppColors.primaryGreen,
-                      earned: user.badges.contains('neighborhood_watch'),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () {
-                    authViewModel.logout();
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  style: TextButton.styleFrom(
-                    backgroundColor: Colors.red.withValues(alpha: 0.05),
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Stack(
                     children: [
-                      Icon(Icons.logout, color: Colors.red, size: 20),
-                      SizedBox(width: 8),
-                      Text('Se déconnecter', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                      CircleAvatar(
+                        radius: 55,
+                        backgroundColor: AppColors.primaryGreen.withValues(alpha: 0.1),
+                        child: const CircleAvatar(
+                          radius: 50,
+                          backgroundColor: AppColors.primaryGreen,
+                          child: Icon(Icons.person, size: 55, color: Colors.white),
+                        ),
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: AppColors.primaryOrange, shape: BoxShape.circle),
+                          child: const Icon(Icons.verified, color: Colors.white, size: 20),
+                        ),
+                      ),
                     ],
                   ),
+                  const SizedBox(height: 15),
+                  Text(
+                    user?.name ?? 'Utilisateur',
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    user?.email ?? 'citoyen@sentinelle.ci',
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                  if (user?.role == UserRole.citizen)
+                    const SizedBox(height: 5),
+                  if (user?.role == UserRole.citizen)
+                    Text(
+                      'Membre depuis ${DateTime.now().year}',
+                      style: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                    ),
+                  const SizedBox(height: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: user?.role == UserRole.administrator 
+                          ? Colors.red.withValues(alpha: 0.1) 
+                          : AppColors.primaryOrange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      user?.role == UserRole.administrator ? 'ADMINISTRATEUR' : 'CITOYEN SENTINELLE',
+                      style: TextStyle(
+                        color: user?.role == UserRole.administrator ? Colors.red : AppColors.primaryOrange, 
+                        fontWeight: FontWeight.bold, 
+                        fontSize: 12
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 30),
+
+            // Statistiques
+            if (user?.role == UserRole.citizen)
+              Row(
+                children: [
+                  _buildStatCard('Points', '${user?.points ?? 0}', Icons.stars, Colors.amber),
+                  _buildStatCard('Signalements', '${user?.reportCount ?? 0}', Icons.campaign, Colors.blue),
+                  _buildStatCard('Résolus', '${user?.resolvedCount ?? 0}', Icons.check_circle, Colors.green),
+                ],
+              ),
+            const SizedBox(height: 25),
+
+            // Badges
+            if (user?.role == UserRole.citizen) ...[
+              _buildSectionTitle('MES BADGES'),
+              const SizedBox(height: 10),
+              SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  children: (user?.badges ?? ['Nouveau']).map((badge) => _buildBadgeChip(badge)).toList(),
                 ),
               ),
-              const SizedBox(height: 30),
-              const _ReputationInfo(),
+              const SizedBox(height: 25),
+            ],
+
+            // Paramètres
+            if (user?.role == UserRole.citizen)
+              _buildSectionTitle('PARAMÈTRES DE CONFIDENTIALITÉ'),
+            if (user?.role == UserRole.citizen)
+              _buildToggleTile(
+                icon: Icons.visibility_off_outlined,
+                title: 'Mode Anonyme',
+                subtitle: 'Masquer mon nom sur les signalements publics',
+                value: isAnonymous,
+                onChanged: (val) => auth.updateAnonymity(val),
+              ),
+            _buildToggleTile(
+              icon: Icons.notifications_none_outlined,
+              title: 'Notifications',
+              subtitle: 'Alertes de suivi de mes signalements',
+              value: _notificationsEnabled,
+              onChanged: (val) => setState(() => _notificationsEnabled = val),
+            ),
+
+            const SizedBox(height: 20),
+            _buildSectionTitle('COMPTE & SÉCURITÉ'),
+            _buildActionTile(
+              icon: Icons.history,
+              title: 'Historique de mes activités',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReportListScreen()),
+                );
+              },
+            ),
+            _buildActionTile(
+              icon: Icons.emoji_events_outlined,
+              title: 'Classement des communes',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LeaderboardScreen()),
+                );
+              },
+            ),
+            _buildActionTile(
+              icon: Icons.info_outline,
+              title: 'À propos de SentinelleCI',
+              onTap: () {
+                showAboutDialog(
+                  context: context,
+                  applicationName: 'SentinelleCI',
+                  applicationVersion: '1.0.0 (Bêta Jury)',
+                  applicationIcon: const Icon(Icons.security, color: AppColors.primaryGreen, size: 50),
+                  children: [
+                    const Text(
+                      'SentinelleCI est une plateforme citoyenne innovante utilisant l\'IA et la Blockchain '
+                      'pour améliorer la gestion urbaine en Côte d\'Ivoire.',
+                    ),
+                    const SizedBox(height: 10),
+                    const Text('Développé pour la soutenance de fin d\'études.'),
+                  ],
+                );
+              },
+            ),
+            _buildActionTile(
+              icon: Icons.logout,
+              title: 'Se déconnecter',
+              color: Colors.red,
+              onTap: () {
+                auth.logout();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+                  (route) => false,
+                );
+              },
+            ),
+            const SizedBox(height: 30),
+            const Text('Version 1.0.0 (Bêta Jury)', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(left: 5, bottom: 10),
+        child: Text(
+          title,
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey.shade600, letterSpacing: 1.1),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+    return Expanded(
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade200)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 15),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 24),
+              const SizedBox(height: 8),
+              Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
             ],
           ),
         ),
       ),
     );
   }
-}
 
-class _ProfileStat extends StatelessWidget {
-  final String value;
-  final String label;
-  const _ProfileStat({required this.value, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.primaryGreen)),
-        Text(label, style: const TextStyle(color: AppColors.textLight, fontSize: 12)),
-      ],
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-      ),
-    );
-  }
-}
-
-class _SettingToggle extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final bool value;
-  final Function(bool) onChanged;
-
-  const _SettingToggle({required this.icon, required this.title, required this.subtitle, required this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildBadgeChip(String label) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryGreen.withValues(alpha: 0.3)),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primaryGreen),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text(subtitle, style: const TextStyle(color: AppColors.textLight, fontSize: 12)),
-              ],
-            ),
-          ),
-          Switch(value: value, onChanged: onChanged, activeThumbColor: AppColors.primaryGreen),
-        ],
+      child: Center(
+        child: Row(
+          children: [
+            const Icon(Icons.military_tech, size: 16, color: AppColors.primaryGreen),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+          ],
+        ),
       ),
     );
   }
-}
 
-class _SettingItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String value;
-  final VoidCallback? onTap;
+  Widget _buildToggleTile({required IconData icon, required String title, required String subtitle, required bool value, required Function(bool) onChanged}) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade100)),
+      child: SwitchListTile(
+        secondary: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: AppColors.primaryGreen.withValues(alpha: 0.1), shape: BoxShape.circle),
+          child: Icon(icon, color: AppColors.primaryGreen, size: 20),
+        ),
+        title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
+        value: value,
+        activeColor: AppColors.primaryGreen,
+        onChanged: onChanged,
+      ),
+    );
+  }
 
-  const _SettingItem({required this.icon, required this.title, required this.value, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(top: 8),
-      child: InkWell(
+  Widget _buildActionTile({required IconData icon, required String title, required VoidCallback onTap, Color? color}) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.grey.shade100)),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(color: (color ?? AppColors.primaryGreen).withValues(alpha: 0.1), shape: BoxShape.circle),
+          child: Icon(icon, color: color ?? AppColors.primaryGreen, size: 20),
+        ),
+        title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: color)),
+        trailing: const Icon(Icons.chevron_right, size: 20),
         onTap: onTap,
-        borderRadius: BorderRadius.circular(15),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            children: [
-              Icon(icon, color: AppColors.primaryGreen),
-              const SizedBox(width: 16),
-              Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold))),
-              Text(value, style: const TextStyle(color: AppColors.textLight)),
-              const Icon(Icons.chevron_right, color: AppColors.textLight, size: 20),
-            ],
-          ),
-        ),
       ),
-    );
-  }
-}
-
-class _BadgeItem extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final bool earned;
-
-  const _BadgeItem({required this.title, required this.subtitle, required this.icon, required this.color, required this.earned});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        children: [
-          Icon(icon, color: earned ? color : Colors.grey.shade300, size: 30),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: earned ? AppColors.textDark : Colors.grey)),
-                Text(subtitle, style: const TextStyle(color: AppColors.textLight, fontSize: 11)),
-              ],
-            ),
-          ),
-          if (earned) const Icon(Icons.check, color: AppColors.primaryGreen, size: 16),
-        ],
-      ),
-    );
-  }
-}
-
-class _ReputationInfo extends StatelessWidget {
-  const _ReputationInfo();
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('À propos de la réputation', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: AppColors.cardBackground,
-            borderRadius: BorderRadius.circular(15),
-          ),
-          child: const Text(
-            'Votre score augmente lorsque vos signaux sont validés et résolus. Il diminue en cas de faux signalement. Un score élevé donne plus de poids à vos alertes auprès de la commune.',
-            style: TextStyle(fontSize: 12, color: AppColors.textDark),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _LanguageTile extends StatelessWidget {
-  final String title;
-  final bool isSelected;
-  const _LanguageTile({required this.title, this.isSelected = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      title: Text(title, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-      trailing: isSelected ? const Icon(Icons.check, color: AppColors.primaryGreen) : null,
-      onTap: () => Navigator.pop(context),
     );
   }
 }

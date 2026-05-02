@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sentinelle_ci/models/user_model.dart';
 
 class AuthViewModel extends ChangeNotifier {
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
-
   final Map<String, dynamic> _localDb = {};
 
   UserModel? get currentUser => _currentUser;
@@ -25,7 +25,7 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<void> _checkAutoLogin() async {
     try {
-      final directory = await getApplicationDocumentsPlatformDirectory();
+      final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/session.json');
       if (await file.exists()) {
         final data = jsonDecode(await file.readAsString());
@@ -33,31 +33,31 @@ class AuthViewModel extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint("Pas de session active");
+      debugPrint("Session expirée");
     }
   }
 
   Future<void> _saveSession(UserModel user) async {
-    final directory = await getApplicationDocumentsPlatformDirectory();
+    final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/session.json');
     await file.writeAsString(jsonEncode(user.toJson()));
   }
 
   Future<void> _loadUsersFromDisk() async {
     try {
-      final directory = await getApplicationDocumentsPlatformDirectory();
+      final directory = await getApplicationDocumentsDirectory();
       final file = File('${directory.path}/users_db.json');
       if (await file.exists()) {
         final data = jsonDecode(await file.readAsString());
         _localDb.addAll(data);
       }
     } catch (e) {
-      debugPrint("Erreur chargement DB");
+      debugPrint("Init local DB");
     }
   }
 
   Future<void> _saveUsersToDisk() async {
-    final directory = await getApplicationDocumentsPlatformDirectory();
+    final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/users_db.json');
     await file.writeAsString(jsonEncode(_localDb));
   }
@@ -81,7 +81,7 @@ class AuthViewModel extends ChangeNotifier {
         _errorMessage = "Mot de passe incorrect";
       }
     } else {
-      _errorMessage = "Compte inexistant. Veuillez vous inscrire.";
+      _errorMessage = "Compte inexistant. Inscrivez-vous.";
     }
 
     _isLoading = false;
@@ -100,23 +100,8 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // SÉCURITÉ : Validation réelle
-    if (!RegExp(r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+").hasMatch(email)) {
-      _errorMessage = "Format d'email invalide";
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-
-    if (password.length < 6) {
-      _errorMessage = "Le mot de passe doit contenir au moins 6 caractères";
-      _isLoading = false;
-      notifyListeners();
-      return false;
-    }
-
     if (_localDb.containsKey(email)) {
-      _errorMessage = "Cet email est déjà utilisé";
+      _errorMessage = "Email déjà utilisé";
       _isLoading = false;
       notifyListeners();
       return false;
@@ -130,10 +115,11 @@ class AuthViewModel extends ChangeNotifier {
       email: email,
       phoneNumber: phoneNumber,
       role: role,
-      points: 0,
+      points: 10,
       reportCount: 0,
       resolvedCount: 0,
-      badges: [],
+      badges: ['Citoyen Débutant'],
+      isAnonymous: false,
     );
 
     _localDb[email] = {
@@ -152,21 +138,67 @@ class AuthViewModel extends ChangeNotifier {
 
   void logout() async {
     _currentUser = null;
-    final directory = await getApplicationDocumentsPlatformDirectory();
+    final directory = await getApplicationDocumentsDirectory();
     final file = File('${directory.path}/session.json');
     if (await file.exists()) await file.delete();
     notifyListeners();
   }
 
-  Future<Directory> getApplicationDocumentsPlatformDirectory() async {
-    final dir = Directory('/data/data/com.example.sentinelle_ci/files');
-    if (!Platform.isAndroid) {
-      // Pour le test sur Windows/Mac
-      return Directory.current;
+  Future<void> updateAnonymity(bool isAnonymous) async {
+    if (_currentUser == null) return;
+    
+    _currentUser = UserModel(
+      id: _currentUser!.id,
+      name: _currentUser!.name,
+      email: _currentUser!.email,
+      phoneNumber: _currentUser!.phoneNumber,
+      role: _currentUser!.role,
+      points: _currentUser!.points,
+      reportCount: _currentUser!.reportCount,
+      resolvedCount: _currentUser!.resolvedCount,
+      badges: _currentUser!.badges,
+      isAnonymous: isAnonymous,
+    );
+    
+    if (_currentUser!.email != null && _localDb.containsKey(_currentUser!.email!)) {
+      _localDb[_currentUser!.email!]['profile'] = _currentUser!.toJson();
+      await _saveUsersToDisk();
     }
-    if (!(await dir.exists())) {
-      await dir.create(recursive: true);
+    
+    await _saveSession(_currentUser!);
+    notifyListeners();
+  }
+
+  Future<void> addPoints(int points) async {
+    if (_currentUser == null) return;
+    
+    _currentUser = UserModel(
+      id: _currentUser!.id,
+      name: _currentUser!.name,
+      email: _currentUser!.email,
+      phoneNumber: _currentUser!.phoneNumber,
+      role: _currentUser!.role,
+      points: _currentUser!.points + points,
+      reportCount: _currentUser!.reportCount + (points == 15 ? 1 : 0),
+      resolvedCount: _currentUser!.resolvedCount + (points == 50 ? 1 : 0),
+      badges: List<String>.from(_currentUser!.badges),
+      isAnonymous: _currentUser!.isAnonymous,
+    );
+    
+    // Update badges based on points
+    if (_currentUser!.points >= 50 && !_currentUser!.badges.contains('Citoyen Actif')) {
+      _currentUser!.badges.add('Citoyen Actif');
     }
-    return dir;
+    if (_currentUser!.points >= 100 && !_currentUser!.badges.contains('Sentinelle d\'Élite')) {
+      _currentUser!.badges.add('Sentinelle d\'Élite');
+    }
+
+    if (_currentUser!.email != null && _localDb.containsKey(_currentUser!.email!)) {
+      _localDb[_currentUser!.email!]['profile'] = _currentUser!.toJson();
+      await _saveUsersToDisk();
+    }
+    
+    await _saveSession(_currentUser!);
+    notifyListeners();
   }
 }

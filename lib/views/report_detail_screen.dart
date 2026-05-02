@@ -40,11 +40,18 @@ class ReportDetailScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
+                const Icon(Icons.person_outline, color: AppColors.textLight, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  report.isAnonymous ? "Signalement Anonyme" : "Par ${report.userName}",
+                  style: const TextStyle(color: AppColors.textLight, fontSize: 13),
+                ),
+                const SizedBox(width: 12),
                 const Icon(Icons.location_on, color: AppColors.primaryGreen, size: 16),
                 const SizedBox(width: 4),
                 Text(
                   report.location, 
-                  style: const TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w500)
+                  style: const TextStyle(color: AppColors.primaryGreen, fontWeight: FontWeight.w500, fontSize: 13)
                 ),
               ],
             ),
@@ -120,9 +127,9 @@ class ReportDetailScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         status.name.toUpperCase(), 
@@ -177,7 +184,7 @@ class ReportDetailScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF8247E5).withOpacity(0.3),
+            color: const Color(0xFF8247E5).withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4)
           )
@@ -197,7 +204,7 @@ class ReportDetailScreen extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), shape: BoxShape.circle),
                   child: const Icon(Icons.security, color: Colors.white),
                 ),
                 const SizedBox(width: 15),

@@ -48,7 +48,7 @@ class ReportCard extends StatelessWidget {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                '${_formatDate(report.createdAt)} • Abidjan',
+                '${_formatDate(report.createdAt)} • ${report.isAnonymous ? "Anonyme" : report.userName}',
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -130,11 +130,20 @@ class ReportCard extends StatelessWidget {
       case ReportCategory.routes: return Icons.edit_road;
       case ReportCategory.lighting: return Icons.lightbulb_outline;
       case ReportCategory.pollution: return Icons.factory_outlined;
+      case ReportCategory.waste: return Icons.delete_outline;
+      case ReportCategory.water: return Icons.water_drop_outlined;
+      case ReportCategory.health: return Icons.health_and_safety_outlined;
       default: return Icons.report_problem_outlined;
     }
   }
 
-  String _formatDate(DateTime date) => "il y a 18h"; 
+  String _formatDate(DateTime date) {
+    final duration = DateTime.now().difference(date);
+    if (duration.inDays > 0) return 'il y a ${duration.inDays}j';
+    if (duration.inHours > 0) return 'il y a ${duration.inHours}h';
+    if (duration.inMinutes > 0) return 'il y a ${duration.inMinutes}m';
+    return "À l'instant";
+  }
 }
 
 class _StatusBadge extends StatelessWidget {

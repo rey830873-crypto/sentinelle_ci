@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sentinelle_ci/utils/app_colors.dart';
 import 'package:sentinelle_ci/viewmodels/report_viewmodel.dart';
+import 'package:sentinelle_ci/viewmodels/auth_viewmodel.dart';
 import 'package:sentinelle_ci/models/report_model.dart';
 import 'package:sentinelle_ci/widgets/report_card.dart';
 
@@ -15,25 +16,30 @@ class AdminDashboard extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Tableau de Bord Communal', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text('Dashboard Admin', style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
+        foregroundColor: AppColors.textDark,
         elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.primaryGreen),
             onPressed: () => reportViewModel.fetchReports(),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           _buildSummaryRibbon(reportViewModel),
           const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('SIGNALEMENTS À TRAITER', 
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textLight)),
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Row(
+              children: [
+                Icon(Icons.list_alt, size: 16, color: AppColors.textLight),
+                SizedBox(width: 8),
+                Text('SIGNALEMENTS À TRAITER', 
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.textLight, fontSize: 12, letterSpacing: 1.1)),
+              ],
             ),
           ),
           Expanded(
@@ -79,6 +85,8 @@ class AdminDashboard extends StatelessWidget {
 
   void _showActionDialog(BuildContext context, ReportModel report) {
     final reportViewModel = Provider.of<ReportViewModel>(context, listen: false);
+    final authViewModel = Provider.of<AuthViewModel>(context, listen: false);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -113,8 +121,20 @@ class AdminDashboard extends StatelessWidget {
               icon: Icons.task_alt, 
               color: Colors.green, 
               onTap: () {
-                reportViewModel.updateStatus(report.id, ReportStatus.resolved);
+                reportViewModel.updateStatus(report.id, ReportStatus.resolved, onResolved: () {
+                  // Reward the user when the report is resolved
+                  if (report.userId != 'anonyme') {
+                     authViewModel.addPoints(50); // Plus de points pour une résolution confirmée
+                  }
+                });
                 Navigator.pop(context);
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('✅ Rapport marqué comme résolu (+50 pts pour l\'auteur).'),
+                    backgroundColor: Colors.green,
+                  )
+                );
               }
             ),
             _ActionButton(

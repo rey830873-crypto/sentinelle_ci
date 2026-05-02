@@ -14,6 +14,7 @@ class ReportModel {
   final ReportStatus status;
   final String? imageUrl;
   final String userId;
+  final String userName;
   final bool isAnonymous;
   final String? blockchainHash;
   final int votes;
@@ -32,6 +33,7 @@ class ReportModel {
     this.status = ReportStatus.submitted,
     this.imageUrl,
     required this.userId,
+    this.userName = "Citoyen",
     this.isAnonymous = false,
     this.blockchainHash,
     this.votes = 0,
@@ -52,6 +54,7 @@ class ReportModel {
       'status': status.index,
       'imageUrl': imageUrl,
       'userId': userId,
+      'userName': userName,
       'isAnonymous': isAnonymous,
       'blockchainHash': blockchainHash,
       'votes': votes,
@@ -67,12 +70,13 @@ class ReportModel {
       description: json['description'],
       category: ReportCategory.values[json['category']],
       location: json['location'],
-      latitude: json['latitude'],
-      longitude: json['longitude'],
+      latitude: (json['latitude'] as num).toDouble(),
+      longitude: (json['longitude'] as num).toDouble(),
       createdAt: DateTime.parse(json['createdAt']),
       status: ReportStatus.values[json['status']],
       imageUrl: json['imageUrl'],
       userId: json['userId'],
+      userName: json['userName'] ?? "Citoyen",
       isAnonymous: json['isAnonymous'] ?? false,
       blockchainHash: json['blockchainHash'],
       votes: json['votes'] ?? 0,

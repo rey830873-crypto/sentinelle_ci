@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'viewmodels/auth_viewmodel.dart';
-import 'viewmodels/report_viewmodel.dart';
-import 'views/onboarding_screen.dart';
-import 'views/home_screen.dart';
-import 'utils/app_colors.dart';
+import 'package:sentinelle_ci/viewmodels/auth_viewmodel.dart';
+import 'package:sentinelle_ci/viewmodels/report_viewmodel.dart';
+import 'package:sentinelle_ci/views/splash_screen.dart';
+import 'package:sentinelle_ci/utils/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,14 +35,7 @@ class MyApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: Consumer<AuthViewModel>(
-        builder: (context, auth, _) {
-          if (auth.currentUser != null) {
-            return const HomeScreen();
-          }
-          return const OnboardingScreen();
-        },
-      ),
+      home: const SplashScreen(),
     );
   }
 }

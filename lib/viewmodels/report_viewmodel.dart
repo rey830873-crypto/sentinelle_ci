@@ -7,9 +7,11 @@ class ReportViewModel extends ChangeNotifier {
   final ApiService _apiService = ApiService();
   List<ReportModel> _reports = [];
   bool _isLoading = false;
+  ReportModel? _lastCreatedReport;
 
   List<ReportModel> get reports => _reports;
   bool get isLoading => _isLoading;
+  ReportModel? get lastCreatedReport => _lastCreatedReport;
 
   int get submittedCount => _reports.where((r) => r.status == ReportStatus.submitted).length;
   int get inProgressCount => _reports.where((r) => r.status == ReportStatus.inProgress || r.status == ReportStatus.validated).length;
@@ -27,9 +29,6 @@ class ReportViewModel extends ChangeNotifier {
     });
   }
 
-  Future<void> fetchReports() async {
-  }
-
   Future<bool> createReport({
     required String title,
     required String description,
@@ -38,6 +37,9 @@ class ReportViewModel extends ChangeNotifier {
     required double latitude,
     required double longitude,
     required String userId,
+    String userName = "Citoyen",
+    bool isAnonymous = false,
+    bool isUrgent = false,
     File? imageFile,
   }) async {
     _isLoading = true;
@@ -59,15 +61,16 @@ class ReportViewModel extends ChangeNotifier {
       createdAt: DateTime.now(),
       status: ReportStatus.submitted,
       userId: userId,
+      userName: userName,
+      isAnonymous: isAnonymous,
       imageUrl: imageUrl,
       blockchainHash: '0x${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}',
-      isUrgent: description.toLowerCase().contains('danger') || description.toLowerCase().contains('urgent'),
+      isUrgent: isUrgent || description.toLowerCase().contains('danger') || description.toLowerCase().contains('urgent'),
     );
 
     try {
       await _apiService.postReport(newReport);
-
-      await _apiService.incrementUserReportCount(userId);
+      _lastCreatedReport = newReport;
       _isLoading = false;
       notifyListeners();
       return true;
@@ -78,11 +81,22 @@ class ReportViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> updateStatus(String reportId, ReportStatus status) async {
+  Future<void> updateStatus(String reportId, ReportStatus status, {VoidCallback? onResolved}) async {
     await _apiService.updateReportStatus(reportId, status);
+    if (status == ReportStatus.resolved && onResolved != null) {
+      onResolved();
+    }
+  }
+
+  Future<void> fetchReports() async {
+    notifyListeners();
   }
 
   Future<void> vote(String reportId, String userId) async {
     await _apiService.voteForReport(reportId, userId);
+  }
+
+  void clearLastReport() {
+    _lastCreatedReport = null;
   }
 }

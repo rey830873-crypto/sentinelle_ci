@@ -9,7 +9,7 @@ class BlockchainExplorerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1117), // Style Dark Mode "Tech"
+      backgroundColor: const Color(0xFF0D1117),
       appBar: AppBar(
         title: const Text('Preuve Blockchain', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.transparent,
@@ -22,7 +22,7 @@ class BlockchainExplorerScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Center(
-              child: Icon(Icons.verified_user, size: 80, color: Color(0xFF8247E5)), // Couleur Polygon
+              child: Icon(Icons.verified_user, size: 80, color: Color(0xFF8247E5)),
             ),
             const SizedBox(height: 10),
             const Center(

@@ -1,10 +1,11 @@
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:sentinelle_ci/models/report_model.dart';
 
 class ApiService {
-  // Base de données en mémoire
   static final List<ReportModel> _mockReports = [];
   static final StreamController<List<ReportModel>> _controller = StreamController<List<ReportModel>>.broadcast();
 
@@ -14,13 +15,13 @@ class ApiService {
 
   Future<void> _loadReportsFromDisk() async {
     try {
-      final file = File('${Directory.systemTemp.path}/reports_db.json');
+      final directory = await getApplicationDocumentsDirectory();
+      final file = File('${directory.path}/reports_db.json');
       if (await file.exists()) {
         final List<dynamic> data = jsonDecode(await file.readAsString());
         _mockReports.clear();
         _mockReports.addAll(data.map((e) => ReportModel.fromJson(e)).toList());
       } else {
-        // Données initiales si vide
         _mockReports.addAll([
           ReportModel(
             id: "1",
@@ -33,6 +34,7 @@ class ApiService {
             createdAt: DateTime.now().subtract(const Duration(days: 2)),
             status: ReportStatus.resolved,
             userId: "user_123",
+            userName: "Jean Marc",
             votes: 45,
             isUrgent: true,
             upvotedBy: ["user_1", "user_2"],
@@ -48,6 +50,7 @@ class ApiService {
             createdAt: DateTime.now().subtract(const Duration(hours: 5)),
             status: ReportStatus.submitted,
             userId: "user_123",
+            userName: "Jean Marc",
             votes: 12,
             isUrgent: false,
           ),
@@ -55,12 +58,13 @@ class ApiService {
       }
       _controller.add(List.from(_mockReports));
     } catch (e) {
-      print("Erreur chargement rapports: $e");
+      debugPrint("Erreur chargement rapports");
     }
   }
 
   Future<void> _saveReportsToDisk() async {
-    final file = File('${Directory.systemTemp.path}/reports_db.json');
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/reports_db.json');
     final data = _mockReports.map((e) => e.toJson()).toList();
     await file.writeAsString(jsonEncode(data));
   }
@@ -90,12 +94,14 @@ class ApiService {
         id: old.id, title: old.title, description: old.description,
         category: old.category, location: old.location, latitude: old.latitude,
         longitude: old.longitude, createdAt: old.createdAt, status: status,
-        userId: old.userId, imageUrl: old.imageUrl, votes: old.votes,
-        upvotedBy: old.upvotedBy, isUrgent: old.isUrgent,
-        blockchainHash: old.blockchainHash,
+        userId: old.userId, userName: old.userName, imageUrl: old.imageUrl, 
+        votes: old.votes, upvotedBy: old.upvotedBy, isUrgent: old.isUrgent,
+        blockchainHash: old.blockchainHash, isAnonymous: old.isAnonymous,
       );
       await _saveReportsToDisk();
       _controller.add(List.from(_mockReports));
+      
+      // If resolved, we would typically reward the user further or update their resolvedCount
     }
   }
 
@@ -109,9 +115,22 @@ class ApiService {
           id: old.id, title: old.title, description: old.description,
           category: old.category, location: old.location, latitude: old.latitude,
           longitude: old.longitude, createdAt: old.createdAt, status: old.status,
-          userId: old.userId, imageUrl: old.imageUrl, votes: old.votes + 1,
-          upvotedBy: newVotes, isUrgent: old.isUrgent,
-          blockchainHash: old.blockchainHash,
+          userId: old.userId, userName: old.userName, imageUrl: old.imageUrl, 
+          votes: old.votes + 1, upvotedBy: newVotes, isUrgent: old.isUrgent,
+          blockchainHash: old.blockchainHash, isAnonymous: old.isAnonymous,
+        );
+        await _saveReportsToDisk();
+        _controller.add(List.from(_mockReports));
+      } else {
+        // Option to downvote/unvote
+        List<String> newVotes = List.from(old.upvotedBy)..remove(userId);
+        _mockReports[index] = ReportModel(
+          id: old.id, title: old.title, description: old.description,
+          category: old.category, location: old.location, latitude: old.latitude,
+          longitude: old.longitude, createdAt: old.createdAt, status: old.status,
+          userId: old.userId, userName: old.userName, imageUrl: old.imageUrl, 
+          votes: old.votes - 1, upvotedBy: newVotes, isUrgent: old.isUrgent,
+          blockchainHash: old.blockchainHash, isAnonymous: old.isAnonymous,
         );
         await _saveReportsToDisk();
         _controller.add(List.from(_mockReports));
