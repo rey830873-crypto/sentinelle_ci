@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "976428346899",
+    "project_id": "sentinelleci-375ab",
+    "storage_bucket": "sentinelleci-375ab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:976428346899:android:8f55e2c777e384bcf899e6",
+        "android_client_info": {
+          "package_name": "com.example.sentinelle_ci"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBA6r1N0EfX2qHXIZcArqcRQp1UCuN028c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
