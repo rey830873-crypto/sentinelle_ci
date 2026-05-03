@@ -55,7 +55,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       if (!serviceEnabled) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Veuillez activer votre GPS pour une localisation précise'))
+            const SnackBar(
+              content: Text('⚠️ GPS désactivé. Activez-le pour une localisation précise.'),
+              backgroundColor: Colors.orange,
+            )
           );
         }
         return;
@@ -64,11 +67,31 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permission GPS refusée')));
+          }
+          return;
+        }
       }
+
+      if (permission == LocationPermission.deniedForever) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GPS bloqué dans les réglages du téléphone.')));
+        }
+        return;
+      }
+
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Recherche de votre position...'), duration: Duration(seconds: 2))
+          );
+        }
+        
         Position position = await Geolocator.getCurrentPosition(
           desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 8),
+          timeLimit: const Duration(seconds: 12),
         );
         if (mounted) {
           setState(() {
@@ -79,7 +102,12 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         }
       }
     } catch (e) {
-      debugPrint("Erreur localisation: $e");
+      if (mounted) {
+        setState(() {
+          _detailedLocation = "Erreur GPS : Utilisation ville par défaut";
+        });
+        debugPrint("Erreur localisation: $e");
+      }
     }
   }
 
@@ -234,15 +262,17 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                     // 2. On ferme le clavier
                     FocusScope.of(context).unfocus();
                     
-                    // FIX ÉCRAN NOIR : On ne pop que si on est sur une page poussée (Navigator.push)
-                    if (Navigator.canPop(context)) {
+                    // FIX ÉCRAN NOIR : Sécurité renforcée pour la navigation
+                    bool canPop = Navigator.canPop(context);
+                    if (canPop) {
                       Navigator.pop(context);
                     } else {
-                      // Sinon (onglet BottomNav), on vide juste les champs
+                      // Si on est dans l'onglet "Signaler", on réinitialise juste l'interface
                       _titleController.clear();
                       _descriptionController.clear();
                       setState(() {
                         _imageFile = null;
+                        _detailedLocation = "Signalement envoyé ✅";
                       });
                     }
                     
@@ -252,9 +282,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                     // 4. On affiche le succès
                     messenger.showSnackBar(
                       const SnackBar(
-                        content: Text('✅ Signalement certifié sur la Blockchain ! (+15 pts)'),
+                        content: Text('✅ Succès ! Signalement certifié sur la Blockchain (+15 pts)'),
                         backgroundColor: AppColors.primaryGreen,
-                        duration: Duration(seconds: 3),
+                        duration: Duration(seconds: 4),
+                        behavior: SnackBarBehavior.floating,
                       )
                     );
                   } else {
