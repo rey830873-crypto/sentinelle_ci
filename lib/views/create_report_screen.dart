@@ -51,25 +51,35 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   Future<void> _getCurrentLocation() async {
     try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Veuillez activer votre GPS pour une localisation précise'))
+          );
+        }
+        return;
+      }
+
       LocationPermission permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
         Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.medium,
-          timeLimit: const Duration(seconds: 5),
+          desiredAccuracy: LocationAccuracy.high,
+          timeLimit: const Duration(seconds: 8),
         );
-        if (mounted && _selectedCity == 'Abidjan' && _detailedLocation.contains('Défaut')) {
+        if (mounted) {
           setState(() {
             _latitude = position.latitude;
             _longitude = position.longitude;
-            _detailedLocation = "GPS : Position détectée";
+            _detailedLocation = "GPS : Position détectée ✅";
           });
         }
       }
     } catch (e) {
-      // Error handled silently for UX
+      debugPrint("Erreur localisation: $e");
     }
   }
 
@@ -218,17 +228,28 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   if (!mounted) return;
 
                   if (success) {
-                    // 1. On prépare le message de succès avant de partir
+                    // 1. On prépare le message de succès
                     final messenger = ScaffoldMessenger.of(context);
                     
-                    // 2. On ferme le clavier et l'écran immédiatement pour la fluidité
+                    // 2. On ferme le clavier
                     FocusScope.of(context).unfocus();
-                    Navigator.pop(context);
                     
-                    // 3. On ajoute les points en tâche de fond (cela ne bloquera plus l'UI)
+                    // FIX ÉCRAN NOIR : On ne pop que si on est sur une page poussée (Navigator.push)
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    } else {
+                      // Sinon (onglet BottomNav), on vide juste les champs
+                      _titleController.clear();
+                      _descriptionController.clear();
+                      setState(() {
+                        _imageFile = null;
+                      });
+                    }
+                    
+                    // 3. On ajoute les points
                     authVm.addPoints(15);
                     
-                    // 4. On affiche le succès (il apparaîtra sur l'écran d'accueil)
+                    // 4. On affiche le succès
                     messenger.showSnackBar(
                       const SnackBar(
                         content: Text('✅ Signalement certifié sur la Blockchain ! (+15 pts)'),
