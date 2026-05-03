@@ -67,10 +67,13 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
+    // Normalisation de l'email
+    final normalizedEmail = email.trim().toLowerCase();
+
     await Future.delayed(const Duration(seconds: 1));
 
-    if (_localDb.containsKey(email)) {
-      final userData = _localDb[email];
+    if (_localDb.containsKey(normalizedEmail)) {
+      final userData = _localDb[normalizedEmail];
       if (userData['password'] == password) {
         _currentUser = UserModel.fromJson(userData['profile']);
         await _saveSession(_currentUser!);
@@ -81,7 +84,7 @@ class AuthViewModel extends ChangeNotifier {
         _errorMessage = "Mot de passe incorrect";
       }
     } else {
-      _errorMessage = "Compte inexistant. Inscrivez-vous.";
+      _errorMessage = "Compte inexistant. Vérifiez l'orthographe ou inscrivez-vous.";
     }
 
     _isLoading = false;
@@ -100,7 +103,9 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    if (_localDb.containsKey(email)) {
+    final normalizedEmail = email.trim().toLowerCase();
+
+    if (_localDb.containsKey(normalizedEmail)) {
       _errorMessage = "Email déjà utilisé";
       _isLoading = false;
       notifyListeners();
@@ -112,8 +117,8 @@ class AuthViewModel extends ChangeNotifier {
     final newUser = UserModel(
       id: "user_${DateTime.now().millisecondsSinceEpoch}",
       name: name,
-      email: email,
-      phoneNumber: phoneNumber,
+      email: normalizedEmail,
+      phoneNumber: phoneNumber.trim(),
       role: role,
       points: 10,
       reportCount: 0,
@@ -122,7 +127,7 @@ class AuthViewModel extends ChangeNotifier {
       isAnonymous: false,
     );
 
-    _localDb[email] = {
+    _localDb[normalizedEmail] = {
       'password': password,
       'profile': newUser.toJson(),
     };
