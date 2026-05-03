@@ -180,7 +180,7 @@ class HomeContent extends StatelessWidget {
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateReportScreen()));
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateReportScreen(isPushed: true)));
                 },
                 child: _ActionBanner(),
               ),
@@ -232,7 +232,7 @@ class HomeContent extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => CreateReportScreen(initialCategory: category),
+            builder: (_) => CreateReportScreen(initialCategory: category, isPushed: true),
           ),
         );
       },

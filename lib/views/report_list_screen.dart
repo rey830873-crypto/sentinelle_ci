@@ -142,7 +142,7 @@ class _ReportListScreenState extends State<ReportListScreen> {
             const SizedBox(height: 30),
             ElevatedButton.icon(
               onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateReportScreen()));
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateReportScreen(isPushed: true)));
               },
               icon: const Icon(Icons.add),
               label: const Text('Faire mon premier signalement'),

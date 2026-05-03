@@ -10,7 +10,8 @@ import 'package:sentinelle_ci/viewmodels/report_viewmodel.dart';
 
 class CreateReportScreen extends StatefulWidget {
   final ReportCategory? initialCategory;
-  const CreateReportScreen({super.key, this.initialCategory});
+  final bool isPushed;
+  const CreateReportScreen({super.key, this.initialCategory, this.isPushed = false});
 
   @override
   State<CreateReportScreen> createState() => _CreateReportScreenState();
@@ -54,10 +55,12 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         if (mounted) {
+          setState(() => _detailedLocation = "Désactivé (Ville par défaut)");
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('⚠️ GPS désactivé. Activez-le pour une localisation précise.'),
+              content: Text('⚠️ Le GPS est désactivé. Veuillez l\'activer.'),
               backgroundColor: Colors.orange,
+              behavior: SnackBarBehavior.floating,
             )
           );
         }
@@ -69,7 +72,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permission GPS refusée')));
+            setState(() => _detailedLocation = "Permission refusée");
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('La permission GPS est nécessaire pour localiser le problème.'))
+            );
           }
           return;
         }
@@ -77,36 +83,48 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
       if (permission == LocationPermission.deniedForever) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('GPS bloqué dans les réglages du téléphone.')));
+          setState(() => _detailedLocation = "GPS bloqué");
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Permission GPS bloquée. Activez-la dans les paramètres.'))
+          );
         }
         return;
       }
 
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Recherche de votre position...'), duration: Duration(seconds: 2))
-          );
-        }
+        setState(() => _detailedLocation = "Recherche satellite...");
         
+        // Essayer d'abord la dernière position connue pour la rapidité
+        Position? lastPos = await Geolocator.getLastKnownPosition();
+        if (lastPos != null && mounted) {
+          setState(() {
+            _latitude = lastPos.latitude;
+            _longitude = lastPos.longitude;
+            _detailedLocation = "Position mémorisée ✅";
+          });
+        }
+
+        // Demander une position fraîche avec un timeout
         Position position = await Geolocator.getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.high,
-          timeLimit: const Duration(seconds: 12),
-        );
+          desiredAccuracy: LocationAccuracy.medium,
+          timeLimit: const Duration(seconds: 15),
+        ).catchError((e) {
+          debugPrint("Timeout ou erreur getCurrentPosition: $e");
+          return lastPos ?? Position(longitude: _longitude, latitude: _latitude, timestamp: DateTime.now(), accuracy: 0, altitude: 0, heading: 0, speed: 0, speedAccuracy: 0, altitudeAccuracy: 0, headingAccuracy: 0);
+        });
+
         if (mounted) {
           setState(() {
             _latitude = position.latitude;
             _longitude = position.longitude;
-            _detailedLocation = "GPS : Position détectée ✅";
+            _detailedLocation = "GPS : Position précise ✅";
           });
         }
       }
     } catch (e) {
+      debugPrint("Erreur localisation globale: $e");
       if (mounted) {
-        setState(() {
-          _detailedLocation = "Erreur GPS : Utilisation ville par défaut";
-        });
-        debugPrint("Erreur localisation: $e");
+        setState(() => _detailedLocation = "Localisation auto échouée");
       }
     }
   }
@@ -256,15 +274,11 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   if (!mounted) return;
 
                   if (success) {
-                    // 1. On prépare le message de succès
                     final messenger = ScaffoldMessenger.of(context);
-                    
-                    // 2. On ferme le clavier
                     FocusScope.of(context).unfocus();
                     
-                    // FIX ÉCRAN NOIR : Sécurité renforcée pour la navigation
-                    bool canPop = Navigator.canPop(context);
-                    if (canPop) {
+                    // FIX ÉCRAN NOIR : Utilisation du flag isPushed
+                    if (widget.isPushed) {
                       Navigator.pop(context);
                     } else {
                       // Si on est dans l'onglet "Signaler", on réinitialise juste l'interface
@@ -276,15 +290,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                       });
                     }
                     
-                    // 3. On ajoute les points
                     authVm.addPoints(15);
                     
-                    // 4. On affiche le succès
                     messenger.showSnackBar(
                       const SnackBar(
-                        content: Text('✅ Succès ! Signalement certifié sur la Blockchain (+15 pts)'),
+                        content: Text('✅ Signalement certifié sur la Blockchain ! (+15 pts)'),
                         backgroundColor: AppColors.primaryGreen,
-                        duration: Duration(seconds: 4),
+                        duration: Duration(seconds: 3),
                         behavior: SnackBarBehavior.floating,
                       )
                     );
