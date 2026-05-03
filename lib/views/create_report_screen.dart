@@ -5,7 +5,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sentinelle_ci/utils/app_colors.dart';
 import 'package:sentinelle_ci/models/report_model.dart';
-import 'package:sentinelle_ci/services/ai_service.dart';
 import 'package:sentinelle_ci/viewmodels/auth_viewmodel.dart';
 import 'package:sentinelle_ci/viewmodels/report_viewmodel.dart';
 
@@ -41,10 +40,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   double _longitude = -4.0305;
   
   File? _imageFile;
-  bool _isAnalyzing = false;
-  bool _aiSuggestedUrgency = false;
   final _picker = ImagePicker();
-  final _aiService = AIService();
 
   @override
   void initState() {
@@ -82,31 +78,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     if (pickedFile != null) {
       setState(() {
         _imageFile = File(pickedFile.path);
-        _isAnalyzing = true;
       });
-      
-      try {
-        final analysis = await _aiService.analyzeImage(_imageFile!);
-        setState(() {
-          _selectedCategory = analysis['category'] as ReportCategory;
-          _titleController.text = analysis['title'] as String;
-          _descriptionController.text = analysis['description'] as String;
-          _aiSuggestedUrgency = analysis['isUrgent'] as bool? ?? false;
-          _isAnalyzing = false;
-        });
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('✅ Analyse IA terminée'),
-              backgroundColor: AppColors.primaryGreen,
-              duration: Duration(seconds: 2),
-            )
-          );
-        }
-      } catch (e) {
-        setState(() => _isAnalyzing = false);
-      }
     }
   }
 
@@ -149,22 +121,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                         Text('Prendre une photo pour preuve', style: TextStyle(color: AppColors.textLight)),
                       ],
                     )
-                  : (_isAnalyzing 
-                      ? Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.4),
-                            borderRadius: BorderRadius.circular(15),
-                          ),
-                          child: const Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              CircularProgressIndicator(color: Colors.white),
-                              SizedBox(height: 10),
-                              Text('Analyse IA en cours...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                            ],
-                          ),
-                        )
-                      : const SizedBox.shrink()),
+                  : const SizedBox.shrink(),
               ),
             ),
             const SizedBox(height: 25),
@@ -229,40 +186,60 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               height: 55,
               child: ElevatedButton(
                 onPressed: reportVm.isLoading ? null : () async {
-                  if (_titleController.text.isNotEmpty && _imageFile != null) {
-                    final success = await reportVm.createReport(
-                      title: _titleController.text,
-                      description: _descriptionController.text,
-                      category: _selectedCategory,
-                      location: "$_selectedCity, Côte d'Ivoire",
-                      latitude: _latitude,
-                      longitude: _longitude,
-                      userId: authVm.currentUser?.id ?? 'anonyme',
-                      userName: authVm.currentUser?.name ?? 'Citoyen',
-                      isAnonymous: authVm.currentUser?.isAnonymous ?? false,
-                      isUrgent: _aiSuggestedUrgency,
-                      imageFile: _imageFile,
+                  // Validation stricte
+                  if (_imageFile == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Veuillez prendre une photo du problème'), backgroundColor: Colors.orange)
                     );
+                    return;
+                  }
+                  
+                  if (_titleController.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Veuillez donner un titre au signalement'), backgroundColor: Colors.orange)
+                    );
+                    return;
+                  }
+
+                  final success = await reportVm.createReport(
+                    title: _titleController.text.trim(),
+                    description: _descriptionController.text.trim(),
+                    category: _selectedCategory,
+                    location: "$_selectedCity, Côte d'Ivoire",
+                    latitude: _latitude,
+                    longitude: _longitude,
+                    userId: authVm.currentUser?.id ?? 'anonyme',
+                    userName: authVm.currentUser?.name ?? 'Citoyen',
+                    isAnonymous: authVm.currentUser?.isAnonymous ?? false,
+                    isUrgent: false,
+                    imageFile: _imageFile,
+                  );
+                  
+                  if (!mounted) return;
+
+                  if (success) {
+                    // 1. On prépare le message de succès avant de partir
+                    final messenger = ScaffoldMessenger.of(context);
                     
-                    if (!mounted) return;
-
-                    if (success) {
-                      await authVm.addPoints(15);
-
-                      if (!context.mounted) return;
-
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('✅ Signalement certifié sur la Blockchain ! (+15 pts)'),
-                          backgroundColor: AppColors.primaryGreen,
-                        )
-                      );
-                    }
+                    // 2. On ferme le clavier et l'écran immédiatement pour la fluidité
+                    FocusScope.of(context).unfocus();
+                    Navigator.pop(context);
+                    
+                    // 3. On ajoute les points en tâche de fond (cela ne bloquera plus l'UI)
+                    authVm.addPoints(15);
+                    
+                    // 4. On affiche le succès (il apparaîtra sur l'écran d'accueil)
+                    messenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Signalement certifié sur la Blockchain ! (+15 pts)'),
+                        backgroundColor: AppColors.primaryGreen,
+                        duration: Duration(seconds: 3),
+                      )
+                    );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Veuillez ajouter une photo et un titre'),
+                        content: Text('❌ Erreur lors de l\'envoi. Vérifiez votre connexion.'),
                         backgroundColor: Colors.redAccent,
                       )
                     );
@@ -272,9 +249,14 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   backgroundColor: AppColors.primaryGreen,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  disabledBackgroundColor: Colors.grey.shade300,
                 ),
-                child: reportVm.isLoading 
-                  ? const CircularProgressIndicator(color: Colors.white)
+                child: reportVm.isLoading
+                  ? const SizedBox(
+                      height: 20, 
+                      width: 20, 
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                    )
                   : const Text('ENVOYER AU REGISTRE PUBLIC', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),

@@ -63,8 +63,8 @@ class WelcomeScreen extends StatelessWidget {
                       title: 'Je suis Administrateur',
                       subtitle: 'Gérer les signalements de la commune',
                       icon: Icons.business,
-                      color: AppColors.cardBackground,
-                      textColor: AppColors.textDark,
+                      color: AppColors.primaryGreen,
+                      textColor: Colors.white,
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen(role: UserRole.administrator)),

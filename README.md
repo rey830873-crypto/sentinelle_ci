@@ -7,9 +7,8 @@ SentinelleCI est une plateforme citoyenne innovante conçue pour réduire la fra
 ### 1. 🔗 Transparence Blockchain (Polygon)
 Contrairement aux applications classiques, chaque signalement sur SentinelleCI génère une preuve immuable sur la blockchain. **Impact :** Suppression impossible des données, responsabilité totale de la commune.
 
-### 2. 🤖 IA & Accessibilité
-- **Signalement Vocal :** Transcription par IA pour les citoyens préférant l'oralité.
-- **Détection IA Vision :** Catégorisation automatique des problèmes via analyse d'image.
+### 2. Accessibilité & Proximité
+- **Signalement Intuitif :** Interface simple pour tous les citoyens.
 - **Inclusivité :** Interface disponible en Français, Dioula et Baoulé.
 
 ### 3. 🎮 Gamification & Engagement

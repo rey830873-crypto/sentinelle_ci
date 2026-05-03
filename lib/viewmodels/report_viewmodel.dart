@@ -45,36 +45,38 @@ class ReportViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    String? imageUrl;
-    if (imageFile != null) {
-      imageUrl = await _apiService.uploadImage(imageFile);
-    }
-
-    final newReport = ReportModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      title: title,
-      description: description,
-      category: category,
-      location: location,
-      latitude: latitude,
-      longitude: longitude,
-      createdAt: DateTime.now(),
-      status: ReportStatus.submitted,
-      userId: userId,
-      userName: userName,
-      isAnonymous: isAnonymous,
-      imageUrl: imageUrl,
-      blockchainHash: '0x${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}',
-      isUrgent: isUrgent || description.toLowerCase().contains('danger') || description.toLowerCase().contains('urgent'),
-    );
-
     try {
+      String? imageUrl;
+      if (imageFile != null) {
+        // Simulation d'upload ou traitement d'image
+        imageUrl = await _apiService.uploadImage(imageFile);
+      }
+
+      final newReport = ReportModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        title: title,
+        description: description,
+        category: category,
+        location: location,
+        latitude: latitude,
+        longitude: longitude,
+        createdAt: DateTime.now(),
+        status: ReportStatus.submitted,
+        userId: userId,
+        userName: userName,
+        isAnonymous: isAnonymous,
+        imageUrl: imageUrl,
+        blockchainHash: '0x${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}',
+        isUrgent: isUrgent || description.toLowerCase().contains('danger') || description.toLowerCase().contains('urgent'),
+      );
+
       await _apiService.postReport(newReport);
       _lastCreatedReport = newReport;
       _isLoading = false;
       notifyListeners();
       return true;
     } catch (e) {
+      debugPrint("Erreur lors de la création du rapport: $e");
       _isLoading = false;
       notifyListeners();
       return false;
