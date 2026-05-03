@@ -150,6 +150,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.textDark,
         elevation: 0,
+        automaticallyImplyLeading: widget.isPushed,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -242,6 +243,9 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
               height: 55,
               child: ElevatedButton(
                 onPressed: reportVm.isLoading ? null : () async {
+                  final authVm = context.read<AuthViewModel>();
+                  final reportViewModel = context.read<ReportViewModel>();
+
                   // Validation stricte
                   if (_imageFile == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -257,7 +261,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                     return;
                   }
 
-                  final success = await reportVm.createReport(
+                  final success = await reportViewModel.createReport(
                     title: _titleController.text.trim(),
                     description: _descriptionController.text.trim(),
                     category: _selectedCategory,
@@ -274,14 +278,17 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   if (!mounted) return;
 
                   if (success) {
+                    // 1. Ajouter les points d'abord
+                    await authVm.addPoints(15);
+                    
                     final messenger = ScaffoldMessenger.of(context);
                     FocusScope.of(context).unfocus();
                     
-                    // FIX ÉCRAN NOIR : Utilisation du flag isPushed
-                    if (widget.isPushed) {
-                      Navigator.pop(context);
+                    // 2. Gérer la navigation de façon ultra-sécurisée
+                    if (widget.isPushed && Navigator.of(context).canPop()) {
+                      Navigator.of(context).pop();
                     } else {
-                      // Si on est dans l'onglet "Signaler", on réinitialise juste l'interface
+                      // Cas de l'onglet : réinitialisation manuelle de l'état
                       _titleController.clear();
                       _descriptionController.clear();
                       setState(() {
@@ -289,8 +296,6 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                         _detailedLocation = "Signalement envoyé ✅";
                       });
                     }
-                    
-                    authVm.addPoints(15);
                     
                     messenger.showSnackBar(
                       const SnackBar(

@@ -16,7 +16,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final List<Map<String, String>> _pages = [
     {
       'title': 'Signalez en un clic',
-      'description': 'Un nid-de-poule ? Un lampadaire en panne ? Prenez une photo et l\'IA s\'occupe du reste.',
+      'description': 'Un nid-de-poule ? Un lampadaire en panne ? Prenez une photo et la plateforme s\'occupe du reste.',
       'image': '📸',
     },
     {

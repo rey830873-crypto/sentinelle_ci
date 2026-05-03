@@ -67,13 +67,20 @@ class AuthViewModel extends ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
 
-    // Normalisation de l'email
     final normalizedEmail = email.trim().toLowerCase();
-
     await Future.delayed(const Duration(seconds: 1));
 
-    if (_localDb.containsKey(normalizedEmail)) {
-      final userData = _localDb[normalizedEmail];
+    // Recherche insensible à la casse dans la base locale
+    String? foundKey;
+    for (var key in _localDb.keys) {
+      if (key.toLowerCase() == normalizedEmail) {
+        foundKey = key;
+        break;
+      }
+    }
+
+    if (foundKey != null) {
+      final userData = _localDb[foundKey];
       if (userData['password'] == password) {
         _currentUser = UserModel.fromJson(userData['profile']);
         await _saveSession(_currentUser!);
@@ -84,7 +91,7 @@ class AuthViewModel extends ChangeNotifier {
         _errorMessage = "Mot de passe incorrect";
       }
     } else {
-      _errorMessage = "Compte inexistant. Vérifiez l'orthographe ou inscrivez-vous.";
+      _errorMessage = "Compte inexistant. Vérifiez l'email ou inscrivez-vous.";
     }
 
     _isLoading = false;

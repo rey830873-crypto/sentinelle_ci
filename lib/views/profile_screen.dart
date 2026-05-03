@@ -188,8 +188,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   applicationIcon: const Icon(Icons.security, color: AppColors.primaryGreen, size: 50),
                   children: [
                     const Text(
-                      'SentinelleCI est une plateforme citoyenne innovante utilisant l\'IA et la Blockchain '
-                      'pour améliorer la gestion urbaine en Côte d\'Ivoire.',
+                      'SentinelleCI est une plateforme citoyenne innovante utilisant '
+                      'la Blockchain pour améliorer la gestion urbaine en Côte d\'Ivoire.',
                     ),
                     const SizedBox(height: 10),
                     const Text('Développé pour la soutenance de fin d\'études.'),
