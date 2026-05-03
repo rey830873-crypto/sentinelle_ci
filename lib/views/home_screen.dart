@@ -22,22 +22,37 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  
+  // Cache des instances d'écrans pour éviter les clignotements et pertes de focus
+  final Map<UserRole, List<Widget>> _screensCache = {};
 
-  List<Widget> _getScreens(bool isAdmin) {
-    if (isAdmin) {
-      return [
+  List<Widget> _getScreens(UserRole? role) {
+    final effectiveRole = role ?? UserRole.citizen;
+    
+    // Si déjà en cache, on retourne la liste existante
+    if (_screensCache.containsKey(effectiveRole)) {
+      return _screensCache[effectiveRole]!;
+    }
+
+    List<Widget> screens;
+    if (effectiveRole == UserRole.administrator) {
+      screens = [
         const AdminDashboard(),
         const MapScreen(),
         const ProfileScreen(),
       ];
+    } else {
+      screens = [
+        const HomeContent(),
+        const ReportListScreen(),
+        const CreateReportScreen(), // Version onglet (isPushed: false par défaut)
+        const MapScreen(),
+        const ProfileScreen(),
+      ];
     }
-    return [
-      const HomeContent(),
-      const ReportListScreen(),
-      const CreateReportScreen(),
-      const MapScreen(),
-      const ProfileScreen(),
-    ];
+    
+    _screensCache[effectiveRole] = screens;
+    return screens;
   }
 
   List<BottomNavigationBarItem> _getNavItems(bool isAdmin) {
@@ -68,28 +83,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final user = context.watch<AuthViewModel>().currentUser;
     final isAdmin = user?.role == UserRole.administrator;
     
-    final screens = _getScreens(isAdmin);
+    final screens = _getScreens(user?.role);
     final navItems = _getNavItems(isAdmin);
 
-    // Ajustement de l'index si le rôle change (sécurité)
-    if (_selectedIndex >= screens.length) {
-      _selectedIndex = 0;
+    // Sécurité renforcée sur l'index
+    int safeIndex = _selectedIndex;
+    if (safeIndex >= screens.length) {
+      safeIndex = 0;
     }
 
     return Scaffold(
       body: IndexedStack(
-        index: _selectedIndex,
+        index: safeIndex,
         children: screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+        currentIndex: safeIndex,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppColors.primaryGreen,
         unselectedItemColor: AppColors.textLight,
         onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
+          if (index < screens.length) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
         },
         items: navItems,
       ),

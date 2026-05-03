@@ -73,7 +73,7 @@ class AuthViewModel extends ChangeNotifier {
     // Recherche insensible à la casse dans la base locale
     String? foundKey;
     for (var key in _localDb.keys) {
-      if (key.toLowerCase() == normalizedEmail) {
+      if (key.trim().toLowerCase() == normalizedEmail) {
         foundKey = key;
         break;
       }

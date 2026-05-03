@@ -278,17 +278,15 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                   if (!mounted) return;
 
                   if (success) {
-                    // 1. Ajouter les points d'abord
-                    await authVm.addPoints(15);
-                    
                     final messenger = ScaffoldMessenger.of(context);
+                    final navigator = Navigator.of(context);
                     FocusScope.of(context).unfocus();
-                    
-                    // 2. Gérer la navigation de façon ultra-sécurisée
-                    if (widget.isPushed && Navigator.of(context).canPop()) {
-                      Navigator.of(context).pop();
+
+                    // 1. Gérer la navigation d'abord pour éviter les conflits de rebuild
+                    if (widget.isPushed && navigator.canPop()) {
+                      navigator.pop();
                     } else {
-                      // Cas de l'onglet : réinitialisation manuelle de l'état
+                      // Cas de l'onglet : réinitialisation locale
                       _titleController.clear();
                       _descriptionController.clear();
                       setState(() {
@@ -296,6 +294,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                         _detailedLocation = "Signalement envoyé ✅";
                       });
                     }
+                    
+                    // 2. Mettre à jour les points APRES la navigation ou le reset
+                    // Cela évite que HomeScreen ne rebuild alors qu'on est en train de pop
+                    Future.microtask(() => authVm.addPoints(15));
                     
                     messenger.showSnackBar(
                       const SnackBar(
